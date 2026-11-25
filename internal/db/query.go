@@ -40,6 +40,11 @@ type UntagResult struct {
 	TagsRemoved      int
 }
 
+type TagCount struct {
+	Count int
+	Tag   string
+}
+
 // TagResources upserts resources and tags them with provided tags after
 // normalizing them.
 func (db *DB) TagResources(
@@ -346,4 +351,94 @@ func escapeLike(s string) string {
 		`_`, `\_`,
 	)
 	return r.Replace(s)
+}
+
+// GetTagsForResource returns all tags attached to a specific path,
+// sorted alphabetically.
+func (db *DB) GetTagsForResource(ctx context.Context, path string) ([]string, error) {
+	rows, err := db.QueryContext(
+		ctx, `
+		SELECT rt.tag
+		FROM resource_tags rt
+		JOIN resources r ON r.id = rt.resource_id
+		WHERE r.path = ?
+		ORDER by rt.tag ASC;
+		`,
+		path,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get tags for resource %q: %w", path, err)
+	}
+	defer rows.Close()
+
+	var tags []string
+	for rows.Next() {
+		var tag string
+		if err := rows.Scan(&tag); err != nil {
+			return nil, fmt.Errorf("scan tag: %w", err)
+		}
+		tags = append(tags, tag)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate tags: %w", err)
+	}
+	return tags, nil
+}
+
+// GetTagCounts takes raw tag segment and finds and returns distinct matching tags
+// resource counts for each.
+// If rawSegment is empty/whitespace, all distinct tags and their resource counts
+// are returned.
+func (db *DB) GetTagCounts(ctx context.Context, rawSegment string) ([]TagCount, error) {
+	var query string
+	var args []any
+
+	norm := NormalizeTag(rawSegment)
+	if norm == "" {
+		query = `
+		SELECT tag, COUNT(resource_id) AS count
+		FROM resource_tags
+		GROUP BY tag
+		ORDER BY tag ASC;
+		`
+	} else {
+		escaped := escapeLike(norm)
+		var pattern string
+		if strings.HasPrefix(strings.TrimSpace(rawSegment), "/") {
+			pattern = "/" + escaped + "/%"
+		} else {
+			pattern = "%/" + escaped + "%/"
+		}
+
+		query = `
+		SELECT tag, COUNT(resource_id) AS COUNT
+		FROM resource_tags
+		WHERE '/' || tag || '/' LIKE ? ESCAPE '\'
+		GROUP BY tag
+		ORDER BY tag ASC;
+		`
+		args = append(args, pattern)
+	}
+
+	rows, err := db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("get tag counts: %w", err)
+	}
+	defer rows.Close()
+
+	var counts []TagCount
+	for rows.Next() {
+		var tc TagCount
+		if err := rows.Scan(&tc.Tag, &tc.Count); err != nil {
+			return nil, fmt.Errorf("scan tag count: %w", err)
+		}
+		counts = append(counts, tc)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate tag counts: %w", err)
+	}
+
+	return counts, nil
 }

@@ -180,3 +180,129 @@ func TestUntagAndOrphanCleanup(t *testing.T) {
 		t.Fatalf("expected 0 remaining resources, got %d", len(remaining))
 	}
 }
+
+func TestGetTagsForResource(t *testing.T) {
+	ctx := context.Background()
+	database := testDB(t)
+
+	items := []ResourceInput{
+		{Path: "/math/Silverman.pdf", IsDir: false},
+	}
+	if _, err := database.TagResources(ctx, items, []string{
+		"Type/Textbook",
+		"Math/Number_Theory/Elliptic_Curves",
+		"Algebra",
+	}); err != nil {
+		t.Fatalf("seed tags: %v", err)
+	}
+
+	got, err := database.GetTagsForResource(ctx, "/math/Silverman.pdf")
+	if err != nil {
+		t.Fatalf("GetTagsForResource failed: %v", err)
+	}
+	want := []string{
+		"Algebra",
+		"Math/Number_Theory/Elliptic_Curves",
+		"Type/Textbook",
+	}
+	if len(got) != len(want) {
+		t.Fatalf("got %d tags (%v), want %d (%v)", len(got), got, len(want), want)
+	}
+	for i := range got {
+		if got[i] != want[i] {
+			t.Errorf("tag[%d] = %q, want %q", i, got[i], want[i])
+		}
+	}
+
+	untracked, err := database.GetTagsForResource(ctx, "/math/DoesNotExist.pdf")
+	if err != nil {
+		t.Fatalf("GetTagsForResource untracked failed: %v", err)
+	}
+	if len(untracked) != 0 {
+		t.Fatalf("expected 0 tags for untracked file, got %v", untracked)
+	}
+}
+
+func TestGetTagCounts(t *testing.T) {
+	ctx := context.Background()
+	database := testDB(t)
+
+	if _, err := database.TagResources(ctx, []ResourceInput{
+		{Path: "/math/Silverman.pdf", IsDir: false},
+	}, []string{"Math/Number_Theory/Elliptic_Curves", "Type/Textbook"}); err != nil {
+		t.Fatalf("seed 1: %v", err)
+	}
+	if _, err := database.TagResources(ctx, []ResourceInput{
+		{Path: "/math/Ireland_Rosen.djvu", IsDir: false},
+	}, []string{"Math/Number_Theory", "Type/Textbook"}); err != nil {
+		t.Fatalf("seed 2: %v", err)
+	}
+	if _, err := database.TagResources(ctx, []ResourceInput{
+		{Path: "/cs/Koblitz_Crypto.pdf", IsDir: false},
+	}, []string{"CS/Cryptography/Elliptic_Curves"}); err != nil {
+		t.Fatalf("seed 3: %v", err)
+	}
+
+	tests := []struct {
+		name    string
+		segment string
+		want    []TagCount
+	}{
+		{
+			name:    "empty filter returns all tags and counts sorted",
+			segment: "",
+			want: []TagCount{
+				{Tag: "CS/Cryptography/Elliptic_Curves", Count: 1},
+				{Tag: "Math/Number_Theory", Count: 1},
+				{Tag: "Math/Number_Theory/Elliptic_Curves", Count: 1},
+				{Tag: "Type/Textbook", Count: 2},
+			},
+		},
+		{
+			name:    "case-insensitive mid-segment filter",
+			segment: "number_theory",
+			want: []TagCount{
+				{Tag: "Math/Number_Theory", Count: 1},
+				{Tag: "Math/Number_Theory/Elliptic_Curves", Count: 1},
+			},
+		},
+		{
+			name:    "leaf segment matches across different root trees",
+			segment: "Elliptic_Curves",
+			want: []TagCount{
+				{Tag: "CS/Cryptography/Elliptic_Curves", Count: 1},
+				{Tag: "Math/Number_Theory/Elliptic_Curves", Count: 1},
+			},
+		},
+		{
+			name:    "leading slash anchors filter to root",
+			segment: "/Math",
+			want: []TagCount{
+				{Tag: "Math/Number_Theory", Count: 1},
+				{Tag: "Math/Number_Theory/Elliptic_Curves", Count: 1},
+			},
+		},
+		{
+			name:    "non-matching segment returns empty slice",
+			segment: "Topology",
+			want:    nil,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := database.GetTagCounts(ctx, tc.segment)
+			if err != nil {
+				t.Fatalf("GetTagCounts(%q) error: %v", tc.segment, err)
+			}
+			if len(got) != len(tc.want) {
+				t.Fatalf("GetTagCounts(%q) got %+v, want %+v", tc.segment, got, tc.want)
+			}
+			for i := range got {
+				if got[i] != tc.want[i] {
+					t.Errorf("count[%d] = %+v, want %+v", i, got[i], tc.want[i])
+				}
+			}
+		})
+	}
+}
