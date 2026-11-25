@@ -37,14 +37,14 @@ There is NO WARRANTY, to the extent permitted by law.`
 
 func (v VersionInfo) Short() string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "%s %s\n", v.AppName, v.Version)
+	fmt.Fprintf(&b, "%s version %s\n", v.AppName, v.Version)
 	fmt.Fprintf(&b, gplNotice, v.Author)
 	return b.String()
 }
 
 func (v VersionInfo) Detailed() string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "%s %s\n", v.AppName, v.Version)
+	fmt.Fprintf(&b, "%s version %s\n", v.AppName, v.Version)
 	fmt.Fprintf(&b, "Commit:     %s\n", v.Commit)
 	fmt.Fprintf(&b, "Built:      %s\n", v.Date)
 	fmt.Fprintf(&b, "Go version: %s\n", runtime.Version())
