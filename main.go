@@ -8,6 +8,20 @@ package main
 
 import "github.com/shsiddhant/kothay/cmd"
 
+var (
+	Version = "dev"
+	Commit  = "none"
+	Date    = "unknown"
+)
+
 func main() {
-	cmd.Execute()
+	cmd.Execute(
+		cmd.VersionInfo{
+			AppName: "kothay",
+			Author:  "Siddhant Sharma",
+			Version: Version,
+			Commit:  Commit,
+			Date:    Date,
+		},
+	)
 }
