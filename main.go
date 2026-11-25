@@ -138,10 +138,15 @@ func main() {
 	var cli CLI
 	cli.DB = filepath.Join(xdg.DataHome, "kothay", "index.db")
 
+	if len(os.Args) == 1 {
+		os.Args = append(os.Args, "--help")
+	}
+
 	ctx := kong.Parse(
 		&cli,
 		kong.Name("kothay"),
 		kong.Description("A CLI for organising files and folders with tags."),
+		kong.UsageOnError(),
 	)
 
 	logger := log.New(io.Discard, "", 0)
