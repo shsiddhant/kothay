@@ -65,9 +65,10 @@ type CLI struct {
 	Verbose bool             `help:"Enable verbose output"                    short:"v"`
 	Version kong.VersionFlag `help:"Show version number and quit"`
 
-	Tag  TagCmd  `cmd:"" help:"Tag files or directories."`
-	Find FindCmd `cmd:"" help:"Find tagged files and directories."`
-	Ls   LsCmd   `cmd:"" help:"List tags for a file/directory, or all tags."`
+	Tag   TagCmd   `cmd:"" help:"Tag files or directories."`
+	Untag UntagCmd `cmd:"" help:"Remove tags from files or directories."`
+	Find  FindCmd  `cmd:"" help:"Find tagged files and directories."`
+	Ls    LsCmd    `cmd:"" help:"List tags for a file/directory, or all tags."`
 
 	VersionCmd VersionCmd `cmd:"" name:"version" help:"Show detailed version information"`
 }
