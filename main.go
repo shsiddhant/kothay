@@ -125,6 +125,48 @@ func (cmd *FindCmd) Run(ctx *AppContext) error {
 	return nil
 }
 
+type LsCmd struct {
+	Path string `arg:"" optional:"" type:"existingpath" help:"File or directory to check. Omit to list all tags."` //nolint:lll
+}
+
+func (cmd *LsCmd) Run(ctx *AppContext) error {
+	runCtx := context.Background()
+
+	if cmd.Path != "" {
+		absPath, err := filepath.Abs(cmd.Path)
+		if err != nil {
+			return fmt.Errorf("resolve path %q: %w", cmd.Path, err)
+		}
+
+		realPath, err := filepath.EvalSymlinks(absPath)
+		if err != nil {
+			return fmt.Errorf("eval symlinks %q: %w", absPath, err)
+		}
+
+		tags, err := ctx.DB.GetTagsForResource(runCtx, realPath)
+		if err != nil {
+			return err
+		}
+		for _, tag := range tags {
+			fmt.Println(tag)
+		}
+		return nil
+	}
+
+	counts, err := ctx.DB.GetTagCounts(runCtx, "")
+	if err != nil {
+		return err
+	}
+	for _, tc := range counts {
+		if ctx.Verbose {
+			fmt.Printf("%d\t%s\n", tc.Count, tc.Tag)
+		} else {
+			fmt.Println(tc.Tag)
+		}
+	}
+	return nil
+}
+
 type CLI struct {
 	DB string `help:"Path to the database file" type:"path"`
 
@@ -132,6 +174,7 @@ type CLI struct {
 
 	Tag  TagCmd  `cmd:"" help:"Tag files or directories."`
 	Find FindCmd `cmd:"" help:"Find tagged files and directories."`
+	Ls   LsCmd   `cmd:"" help:"List tags for a file/directory, or all tags."`
 }
 
 func main() {
