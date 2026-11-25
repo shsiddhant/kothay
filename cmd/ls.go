@@ -9,7 +9,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 )
 
 type LsCmd struct {
@@ -20,14 +19,9 @@ func (cmd *LsCmd) Run(ctx *AppContext) error {
 	runCtx := context.Background()
 
 	if cmd.Path != "" {
-		absPath, err := filepath.Abs(cmd.Path)
+		realPath, err := resolvePath(cmd.Path)
 		if err != nil {
-			return fmt.Errorf("resolve path %q: %w", cmd.Path, err)
-		}
-
-		realPath, err := filepath.EvalSymlinks(absPath)
-		if err != nil {
-			return fmt.Errorf("eval symlinks %q: %w", absPath, err)
+			return err
 		}
 
 		tags, err := ctx.DB.GetTagsForResource(runCtx, realPath)

@@ -10,7 +10,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/shsiddhant/kothay/internal/db"
 )
@@ -25,14 +24,9 @@ func (cmd *TagCmd) Run(ctx *AppContext) error {
 	items := make([]db.ResourceInput, 0, len(cmd.Paths))
 
 	for _, p := range cmd.Paths {
-		absPath, err := filepath.Abs(p)
+		realPath, err := resolvePath(p)
 		if err != nil {
-			return fmt.Errorf("resolve path %q: %w", p, err)
-		}
-
-		realPath, err := filepath.EvalSymlinks(absPath)
-		if err != nil {
-			return fmt.Errorf("eval symlinks %q: %w", absPath, err)
+			return err
 		}
 
 		info, err := os.Stat(realPath)
