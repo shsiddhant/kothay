@@ -66,14 +66,14 @@ func (cmd *UntagCmd) Run(ctx *AppContext) error {
 		resStr = "resource"
 	}
 
-	tagStr := "tags"
+	tagStr := "links"
 	if res.TagsRemoved == 1 {
-		tagStr = "tag"
+		tagStr = "link"
 	}
 
 	fmt.Fprintf(
 		os.Stderr,
-		"Removed %d %s (%d %s removed)\n",
+		"Removed %d tag %s (%d %s removed)\n",
 		res.TagsRemoved,
 		tagStr,
 		res.ResourcesRemoved,

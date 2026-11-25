@@ -56,14 +56,14 @@ func (cmd *TagCmd) Run(ctx *AppContext) error {
 		resStr = "resource"
 	}
 
-	tagStr := "tags"
+	tagStr := "links"
 	if res.TagsAdded == 1 {
-		tagStr = "tag"
+		tagStr = "link"
 	}
 
 	fmt.Fprintf(
 		os.Stderr,
-		"Tagged %d %s (%d new %s added)\n",
+		"Tagged %d %s (%d tag %s added)\n",
 		res.ResourcesTagged,
 		resStr,
 		res.TagsAdded,
