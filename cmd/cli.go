@@ -75,7 +75,6 @@ type CLI struct {
 
 func Execute(v VersionInfo) {
 	var cli CLI
-	cli.DB = filepath.Join(xdg.DataHome, "kothay", "index.db")
 
 	if len(os.Args) == 1 {
 		os.Args = append(os.Args, "--help")
@@ -88,6 +87,10 @@ func Execute(v VersionInfo) {
 		kong.UsageOnError(),
 		kong.Vars{"version": v.Short()},
 	)
+
+	if cli.DB == "" {
+		cli.DB = filepath.Join(xdg.DataHome, "kothay", "index.db")
+	}
 
 	logger := log.New(io.Discard, "", 0)
 	if cli.Verbose {
