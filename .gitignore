@@ -35,3 +35,5 @@ go.work.sum
 
 # Built binaries
 bin/
+# Added by goreleaser init:
+dist/
